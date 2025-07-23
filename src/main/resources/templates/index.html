@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CRM Project</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr"
+      crossorigin="anonymous"
+    />
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    
+  </head>
+
+  <body>
+    <!-- header starts -->
+    	<div th:if="${sessionUser == null OR sessionUser == ''}">
+  		 	<div th:replace="~{fragments/header :: crm-header}"></div>
+  		</div> 
+  		<div th:unless="${sessionUser == null OR sessionUser == ''}">
+  		 	<div th:replace="~{fragments/user-header :: u-header}"></div>
+  		 </div> 
+     <!-- header ends -->
+
+     <!-- main content starts -->
+     <body>
+    <main>
+        <!-- banner -->
+      <section>
+        <img src="/images/banner.jpg" alt="banner-image" width="100%" />
+      </section>
+
+      <!-- content -->
+      <section class="container py-5 bg-light">
+        <h3 class="text-center mb-4">Our Courses</h3>
+
+        <!-- courses division starts -->
+        <div class="row g-4">
+        
+          <!------ one course card start ------>      
+          <div th:each="course : ${coursesList}" class="col-lg-3 col-md-6">
+            <div class="card" style="width: 18rem">
+              <img	  
+                th:src="@{${course.imageUrl}}"
+                class="card-img-top"
+                alt="core java"
+              />
+              <div class="card-body">
+                <h5 class="card-title"><span th:text="${course.name}"></span></h5>
+                <p class="card-text">
+                  <span th:text="${course.description}"></span>
+                </p>
+                <p><strong>Price : </strong> <del>Rs. <span th:text="${course.orginalPrice}"></span></del> <span class="bg-info p-1">Rs.<span th:text="${course.discountedPrice}"></span></span></p>
+                <div th:if="${sessionUser == null OR sessionUser == ''}">
+  		 			<a href="login" class="btn btn-outline-primary">Login to Buy</a>
+  				</div> 
+  				<div th:unless="${sessionUser == null OR sessionUser == ''}">
+  		 			<!-- course buy button -->
+  		 			<button class="btn btn-primary"
+  		 				th:data-cname="${course.name}"
+  		 				th:data-camount="${course.discountedPrice}"
+  		 				th:data-uname="${sessionUser.name}"
+  		 				th:data-uemail="${sessionUser.email}"
+  		 				th:data-uphoneno="${sessionUser.phoneno}"
+  		 				onclick="purchaseCourse(this.getAttribute('data-cname'), this.getAttribute('data-camount'), this.getAttribute('data-uname'), this.getAttribute('data-uemail'), this.getAttribute('data-uphoneno'))">
+  		 				Buy
+  		 			</button>
+  				 </div> 
+              </div>
+              <div class="card-footer text-body-secondary">
+                Updated : <span th:text="${course.updatedOn}"></span>
+              </div>
+            </div>
+          </div> 
+              <!------ one course card ends ------->           
+        </div>
+          <!-- courses division starts -->
+      </section>
+    </main>
+    <!-- main content ends -->
+
+
+    <!-- footer starts -->
+    	 <div th:replace="~{fragments/footer :: crm-footer}"></div>
+    <!-- footer -->
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q"
+      crossorigin="anonymous"
+    ></script>
+    
+   	 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+       function purchaseCourse(courseName, courseAmount, uname, uemail, uphoneno)
+       {
+                var options = {
+                "key": "rzp_test_TXHV3DPuOS2MaC", 
+                "amount": courseAmount * 100, 
+                "currency": "INR",
+                "name": "CRM-Project",
+                "description": "Course Transaction ",
+                "image": "https://img.freepik.com/free-vector/abstract-company-logo_53876-120501.jpg?semt=ais_hybrid&w=740",
+                 "handler": function (response){
+                    console.log(response);
+                    alert("Payment successfull");
+                    
+                    var requestData ={
+                    					courseName: courseName,
+                    					courseAmount:courseAmount,
+                    					userEmail: uemail,
+                    					dateOfPurchase: new Date().toLocaleString(),
+                    					rzpPaymentId: response.razorpay_payment_id
+                    				};
+                    
+                    $.ajax({
+                    		type: "POST",
+                    		url: "/api/storeOrderDetails",
+                    		contentType: "application/json",
+                    		data: JSON.stringify(requestData),
+                    		success: function(response){
+                    			console.log("data stored successfully", response);
+                    			alert("Congratz,  course has been provided, Thank you");
+                    			window.location.href= '/myCourses';
+                    		},
+                    		error: function(error){
+                    			console.log("Error : "+error);
+                    			alert("Some error occured : "+error);
+                    		}	
+                    });
+                },
+                "prefill": {
+                    "name": uname,
+                    "email": uemail,
+                    "contact": uphoneno
+                },
+                "notes": {
+                    "courseName": courseName
+                },
+                "theme": {
+                    "color": "#3399cc"
+                }
+            };
+            var rzp1 = new Razorpay(options);
+            rzp1.on('payment.failed', function (response){
+                    console.log(response);     
+                    alert("Error: "+response);
+            });
+
+            rzp1.open();
+       }
+    </script>
+    
+  </body>
+</html>
